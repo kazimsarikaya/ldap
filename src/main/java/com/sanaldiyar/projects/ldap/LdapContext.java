@@ -68,16 +68,55 @@ public class LdapContext {
             Attributes attributes = context.getAttributes(dn);
             T res = clazz.newInstance();
             Field[] declaredFields = clazz.getDeclaredFields();
+            boolean access;
 
             for (Field field : declaredFields) {
                 LdapAttribute la = field.getAnnotation(LdapAttribute.class);
                 if (la != null) {
                     String aname = la.value();
                     Attribute fvalue = attributes.get(aname);
+
+                    access = field.isAccessible();
+                    if (!access) {
+                        field.setAccessible(true);
+                    }
+
+
                     if (fvalue == null) {
                         field.set(res, null);
                     } else {
-                        field.set(res, fvalue.get());
+                        Class<?> type = field.getType();
+                        if (type.isPrimitive()) {
+                            String value = fvalue.get().toString();
+
+                            if (type.isAssignableFrom(boolean.class)) {
+                                field.set(res, Boolean.valueOf(value));
+                            } else if (type.isAssignableFrom(byte.class)) {
+                                field.set(res, Integer.valueOf(value).byteValue());
+                            } else if (type.isAssignableFrom(char.class)) {
+                                field.set(res, value.charAt(0));
+                            } else if (type.isAssignableFrom(double.class)) {
+                                field.set(res, Double.valueOf(value).doubleValue());
+                            } else if (type.isAssignableFrom(float.class)) {
+                                field.set(res, Float.valueOf(value).floatValue());
+                            } else if (type.isAssignableFrom(int.class)) {
+                                field.set(res, Integer.valueOf(value).intValue());
+                            } else if (type.isAssignableFrom(long.class)) {
+                                field.set(res, Long.valueOf(value).longValue());
+                            } else if (type.isAssignableFrom(short.class)) {
+                                field.set(res, Short.valueOf(value).shortValue());
+                            }
+
+
+
+                        } else {
+                            field.set(res, fvalue.get());
+                        }
+
+                        if (!access) {
+                            field.setAccessible(false);
+                        }
+
                     }
                 }
             }
