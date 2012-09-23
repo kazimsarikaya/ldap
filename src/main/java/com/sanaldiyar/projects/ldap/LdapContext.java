@@ -4,14 +4,17 @@
  */
 package com.sanaldiyar.projects.ldap;
 
+import java.lang.reflect.Array;
 import java.lang.reflect.Field;
-import java.util.Hashtable;
+import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.naming.Context;
 import javax.naming.NamingException;
 import javax.naming.directory.Attribute;
 import javax.naming.directory.Attributes;
+import javax.naming.directory.BasicAttribute;
+import javax.naming.directory.BasicAttributes;
 import javax.naming.directory.DirContext;
 import javax.naming.ldap.Control;
 import javax.naming.ldap.InitialLdapContext;
@@ -47,7 +50,7 @@ public class LdapContext {
     public void connect() throws NamingException {
 
 
-        Hashtable env = new Hashtable();
+        Properties env = new Properties();
 
         env.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
         env.put(Context.PROVIDER_URL, "ldap://" + this.server + ":" + this.port);
@@ -110,7 +113,82 @@ public class LdapContext {
 
 
                         } else {
-                            field.set(res, fvalue.get());
+                            if (fvalue.size() == 1) {
+                                if (type.isArray()) {
+                                    Class<?> atype = type.getComponentType();
+                                    Object itm = null;
+                                    Object o = Array.newInstance(atype, 1);
+
+                                    if (atype.isPrimitive()) {
+                                        String value = fvalue.get().toString();
+
+                                        if (type.isAssignableFrom(boolean.class)) {
+                                            itm = Boolean.valueOf(value);
+                                        } else if (type.isAssignableFrom(byte.class)) {
+                                            itm = Integer.valueOf(value).byteValue();
+                                        } else if (type.isAssignableFrom(char.class)) {
+                                            itm = value.charAt(0);
+                                        } else if (type.isAssignableFrom(double.class)) {
+                                            itm = Double.valueOf(value).doubleValue();
+                                        } else if (type.isAssignableFrom(float.class)) {
+                                            itm = Float.valueOf(value).floatValue();
+                                        } else if (type.isAssignableFrom(int.class)) {
+                                            itm = Integer.valueOf(value).intValue();
+                                        } else if (type.isAssignableFrom(long.class)) {
+                                            itm = Long.valueOf(value).longValue();
+                                        } else if (type.isAssignableFrom(short.class)) {
+                                            itm = Short.valueOf(value).shortValue();
+                                        }
+
+                                    } else {
+                                        //FIXME
+                                        itm = fvalue.get();
+                                    }
+
+                                    Array.set(o, 0, itm);
+                                    field.set(res, o);
+                                } else {
+                                    field.set(res, fvalue.get());
+                                }
+                            } else if (fvalue.size() > 1) {
+                                if (type.isArray()) {
+                                    Class<?> atype = type.getComponentType();
+                                    Object itm = null;
+                                    Object o = Array.newInstance(atype, fvalue.size());
+                                    for (int i = 0; i < fvalue.size(); i++) {
+                                        if (atype.isPrimitive()) {
+                                            String value = fvalue.get(i).toString();
+
+                                            if (type.isAssignableFrom(boolean.class)) {
+                                                itm = Boolean.valueOf(value);
+                                            } else if (type.isAssignableFrom(byte.class)) {
+                                                itm = Integer.valueOf(value).byteValue();
+                                            } else if (type.isAssignableFrom(char.class)) {
+                                                itm = value.charAt(0);
+                                            } else if (type.isAssignableFrom(double.class)) {
+                                                itm = Double.valueOf(value).doubleValue();
+                                            } else if (type.isAssignableFrom(float.class)) {
+                                                itm = Float.valueOf(value).floatValue();
+                                            } else if (type.isAssignableFrom(int.class)) {
+                                                itm = Integer.valueOf(value).intValue();
+                                            } else if (type.isAssignableFrom(long.class)) {
+                                                itm = Long.valueOf(value).longValue();
+                                            } else if (type.isAssignableFrom(short.class)) {
+                                                itm = Short.valueOf(value).shortValue();
+                                            }
+
+                                        } else {
+                                            //FIXME
+                                            itm = fvalue.get(i);
+                                        }
+                                        Array.set(o, i, itm);
+                                    }
+
+                                    field.set(res, o);
+                                } else {
+                                    field.set(res, fvalue.get());
+                                }
+                            }
                         }
 
                         if (!access) {
@@ -128,5 +206,70 @@ public class LdapContext {
             Logger.getLogger(LdapContext.class.getName()).log(Level.SEVERE, null, ex);
         }
         return null;
+    }
+
+    public void setEntity(String identifier, String parentDn, EntityType entityType, Object o) {
+        try {
+            String dn = identifier + "," + parentDn;
+
+            Attributes attributes = new BasicAttributes(true);
+
+            Attribute attribute;
+
+            attribute = new BasicAttribute("objectClass");
+            attribute.add(entityType.toString());
+            attributes.put(attribute);
+
+
+            Field[] declaredFields = o.getClass().getDeclaredFields();
+
+
+            boolean access;
+
+            for (Field field : declaredFields) {
+                LdapAttribute la = field.getAnnotation(LdapAttribute.class);
+                if (la != null) {
+                    String aname = la.value();
+                    attribute = new BasicAttribute(aname);
+
+
+                    access = field.isAccessible();
+                    if (!access) {
+                        field.setAccessible(true);
+                    }
+                    Class<?> type = field.getType();
+                    if (!type.isArray()) {
+                        Object value = field.get(o);
+                        //FIXME
+                        attribute.add(value.toString());
+                    } else {
+                        Object[] values = (Object[]) field.get(o);
+                        for (Object value : values) {
+                            //FIXME
+                            attribute.add(value.toString());
+                        }
+                    }
+
+                    if (!access) {
+                        field.setAccessible(false);
+                    }
+
+                    attributes.put(attribute);
+
+                }
+            }
+
+
+            this.context.createSubcontext(dn, attributes);
+
+
+        } catch (NamingException ex) {
+            Logger.getLogger(LdapContext.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IllegalArgumentException ex) {
+            Logger.getLogger(LdapContext.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IllegalAccessException ex) {
+            Logger.getLogger(LdapContext.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
     }
 }
