@@ -6,6 +6,8 @@ package com.sanaldiyar.projects.ldap;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -16,6 +18,7 @@ import javax.naming.directory.Attributes;
 import javax.naming.directory.BasicAttribute;
 import javax.naming.directory.BasicAttributes;
 import javax.naming.directory.DirContext;
+import javax.naming.directory.ModificationItem;
 import javax.naming.ldap.Control;
 import javax.naming.ldap.InitialLdapContext;
 
@@ -241,12 +244,20 @@ public class LdapContext {
                     if (!type.isArray()) {
                         Object value = field.get(o);
                         //FIXME
-                        attribute.add(value.toString());
+                        if (type.isPrimitive()) {
+                            attribute.add(value.toString());
+                        } else {
+                            attribute.add(value);
+                        }
                     } else {
                         Object[] values = (Object[]) field.get(o);
                         for (Object value : values) {
                             //FIXME
-                            attribute.add(value.toString());
+                            if (value.getClass().isPrimitive()) {
+                                attribute.add(value.toString());
+                            } else {
+                                attribute.add(value);
+                            }
                         }
                     }
 
@@ -271,5 +282,70 @@ public class LdapContext {
             Logger.getLogger(LdapContext.class.getName()).log(Level.SEVERE, null, ex);
         }
 
+    }
+
+    public void updateEntity(String dn, Object o) {
+
+        try {
+            Field[] declaredFields = o.getClass().getDeclaredFields();
+            Attribute attribute;
+            List<ModificationItem> items = new LinkedList<ModificationItem>();
+
+            boolean access;
+
+            for (Field field : declaredFields) {
+                LdapAttribute la = field.getAnnotation(LdapAttribute.class);
+                if (la != null) {
+                    String aname = la.value();
+                    attribute = new BasicAttribute(aname);
+
+
+                    access = field.isAccessible();
+                    if (!access) {
+                        field.setAccessible(true);
+                    }
+                    Class<?> type = field.getType();
+                    if (!type.isArray()) {
+                        Object value = field.get(o);
+                        //FIXME
+                        if (type.isPrimitive()) {
+                            attribute.add(value.toString());
+                        } else {
+                            attribute.add(value);
+                        }
+                    } else {
+                        Object[] values = (Object[]) field.get(o);
+                        for (Object value : values) {
+                            //FIXME
+                            if (value.getClass().isPrimitive()) {
+                                attribute.add(value.toString());
+                            } else {
+                                attribute.add(value);
+                            }
+                        }
+                    }
+
+                    if (!access) {
+                        field.setAccessible(false);
+                    }
+
+                    items.add(new ModificationItem(DirContext.REPLACE_ATTRIBUTE, attribute));
+                }
+            }
+            
+            ModificationItem[] mitems=new ModificationItem[items.size()];
+            mitems=items.toArray(mitems);
+            context.modifyAttributes(dn, mitems);
+        } catch (NamingException ex) {
+            Logger.getLogger(LdapContext.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IllegalArgumentException ex) {
+            Logger.getLogger(LdapContext.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IllegalAccessException ex) {
+            Logger.getLogger(LdapContext.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+    
+    public void deleteEntity(String dn) throws NamingException{
+        context.destroySubcontext(dn);
     }
 }
