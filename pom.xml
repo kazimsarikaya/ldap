@@ -27,4 +27,15 @@
       <version>1.6</version>
     </dependency>
   </dependencies>
+  
+  <distributionManagement>
+      <repository>
+          <id>sanaldiyar-snapshot</id>
+          <name>Sanal Diyar Snapshots</name>
+          <url>http://maven2.sanaldiyar.com/repo/</url>
+      </repository>
+  </distributionManagement>
+  
+  
+  
 </project>
