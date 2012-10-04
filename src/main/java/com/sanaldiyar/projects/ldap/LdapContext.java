@@ -211,7 +211,7 @@ public class LdapContext {
         return null;
     }
 
-    public void setEntity(String identifier, String parentDn, EntityType entityType, Object o) {
+    public void setEntity(String identifier, String parentDn, EntityType[] entityTypes, Object o) {
         try {
             String dn = identifier + "," + parentDn;
 
@@ -220,9 +220,11 @@ public class LdapContext {
             Attribute attribute;
 
             attribute = new BasicAttribute("objectClass");
-            attribute.add(entityType.toString());
-            attributes.put(attribute);
 
+            for (int i = 0; i < entityTypes.length; i++) {
+                attribute.add(entityTypes[i].toString());
+            }
+            attributes.put(attribute);
 
             Field[] declaredFields = o.getClass().getDeclaredFields();
 
@@ -332,9 +334,9 @@ public class LdapContext {
                     items.add(new ModificationItem(DirContext.REPLACE_ATTRIBUTE, attribute));
                 }
             }
-            
-            ModificationItem[] mitems=new ModificationItem[items.size()];
-            mitems=items.toArray(mitems);
+
+            ModificationItem[] mitems = new ModificationItem[items.size()];
+            mitems = items.toArray(mitems);
             context.modifyAttributes(dn, mitems);
         } catch (NamingException ex) {
             Logger.getLogger(LdapContext.class.getName()).log(Level.SEVERE, null, ex);
@@ -344,8 +346,8 @@ public class LdapContext {
             Logger.getLogger(LdapContext.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
-    
-    public void deleteEntity(String dn) throws NamingException{
+
+    public void deleteEntity(String dn) throws NamingException {
         context.destroySubcontext(dn);
     }
 }

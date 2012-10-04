@@ -10,7 +10,7 @@ package com.sanaldiyar.projects.ldap;
  */
 public enum EntityType {
 
-    INETORGPERSON;
+    INETORGPERSON,POSIXACCOUNT,ORGANIZATIONALPERSON,PERSON;
 
     @Override
     public String toString() {
@@ -19,6 +19,15 @@ public enum EntityType {
         switch (this) {
             case INETORGPERSON:
                 res = "inetOrgPerson";
+                break;
+            case POSIXACCOUNT:
+                res="posixAccount";
+                break;
+            case ORGANIZATIONALPERSON:
+                res="organizationalPerson";
+                break;
+            case PERSON:
+                res="person";
                 break;
         }
 
