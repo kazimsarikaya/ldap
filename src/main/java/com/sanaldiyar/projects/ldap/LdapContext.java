@@ -207,6 +207,8 @@ public class LdapContext {
             Logger.getLogger(LdapContext.class.getName()).log(Level.SEVERE, null, ex);
         } catch (IllegalAccessException ex) {
             Logger.getLogger(LdapContext.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (Exception ex){
+            
         }
         return null;
     }
