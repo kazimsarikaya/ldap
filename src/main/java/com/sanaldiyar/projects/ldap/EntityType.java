@@ -8,29 +8,7 @@ package com.sanaldiyar.projects.ldap;
  *
  * @author kazim
  */
-public enum EntityType {
-
-    INETORGPERSON,POSIXACCOUNT,ORGANIZATIONALPERSON,PERSON;
-
+public interface EntityType {
     @Override
-    public String toString() {
-        String res = "";
-
-        switch (this) {
-            case INETORGPERSON:
-                res = "inetOrgPerson";
-                break;
-            case POSIXACCOUNT:
-                res="posixAccount";
-                break;
-            case ORGANIZATIONALPERSON:
-                res="organizationalPerson";
-                break;
-            case PERSON:
-                res="person";
-                break;
-        }
-
-        return res;
-    }
+    String toString();
 }
